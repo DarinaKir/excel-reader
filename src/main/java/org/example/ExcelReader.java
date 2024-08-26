@@ -39,7 +39,7 @@ public class ExcelReader {
                     // Get the sixth cell (index 5 because it's zero-based)
                     Cell cell = row.getCell(5);
                     if (cell != null) {
-                        if (cell.getStringCellValue() == ""){
+                        if (cell.getStringCellValue().isEmpty()){
                             descriptions.add("NULL");
                         }else {
                             descriptions.add(cell.getStringCellValue());
