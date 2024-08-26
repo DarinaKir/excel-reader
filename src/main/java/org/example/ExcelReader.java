@@ -21,7 +21,7 @@ public class ExcelReader {
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
     public static void main(String[] args) {
-        String excelFilePath = "src/main/files/סיווג בגדים GPT.xlsx";
+        String excelFilePath = "src/main/files/Classification of clothes.xlsx";
         List<String> descriptions = new ArrayList<>();
         int startRow = 1; // Start from row 2 (index 1)
         int endRow = 49;  // End at row 50 (index 49)
