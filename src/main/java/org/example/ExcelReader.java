@@ -5,6 +5,7 @@ import org.apache.poi.ss.usermodel.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +21,7 @@ public class ExcelReader {
     private static final String API_KEY = "sk-proj-Zbb2hJm0XgqKpmZSKdzTT3BlbkFJShq32tPAUZa8o24o2qr2";
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         String excelFilePath = "src/main/files/Classification of clothes.xlsx";
         List<String> descriptions = new ArrayList<>();
         int startRow = 1; // Start from row 2 (index 1)
@@ -80,7 +81,7 @@ public class ExcelReader {
 
         // Create the request payload
         String requestPayload = "{"
-                + "  \"model\": \"gpt-3.5-turbo\","
+                + "  \"model\": \"gpt-4o\","
                 + "  \"messages\": ["
                 + "    {\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},"
                 + "    {\"role\": \"user\", \"content\": \"Choose an outfit for a party from the following items: " + clothingItemsJson + "\"}"
@@ -108,5 +109,6 @@ public class ExcelReader {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+
     }
 }
