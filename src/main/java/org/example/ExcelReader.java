@@ -92,7 +92,7 @@ public class ExcelReader {
                 "model", "gpt-4o",
                 "messages", List.of(
                         Map.of("role", "system", "content", "You are a helpful assistant."),
-                        Map.of("role", "user", "content", "Choose an look (shirt and pants/skirt or dresses/suits, you can add accessories and suitable shoes) for a party from the following items, return JSON with only their ID:" + clothes)
+                        Map.of("role", "user", "content", "You are a stylist, choose an look (shirt and pants/skirt or dresses/suits, you can add accessories and suitable shoes) for a party from the following items note that the colors match, return JSON with only their ID:" + clothes)
                 )
         ));
 
