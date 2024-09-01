@@ -2,6 +2,7 @@ package org.example;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.poi.ss.usermodel.*;
 
 import java.io.File;
@@ -20,7 +21,7 @@ import java.util.Map;
 import com.google.gson.Gson;
 
 public class ExcelReader {
-    private static final String API_KEY = "sk-proj-Zbb2hJm0XgqKpmZSKdzTT3BlbkFJShq32tPAUZa8o24o2qr2";
+    private static final String API_KEY = "";
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
     private static final List<OutfitItem> outfits = new ArrayList<>();
 
@@ -83,6 +84,17 @@ public class ExcelReader {
         for (OutfitItem outfitItem : outfits) {
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("id", outfitItem.getId());
+            jsonObject.addProperty("type", outfitItem.getType());
+            jsonObject.addProperty("style", outfitItem.getStyle());
+            jsonObject.addProperty("color", outfitItem.getColor());
+
+            //makes smaller JsonArray for each outfitItem's seasons
+            JsonArray seasonsArray = new JsonArray();
+            for (String season : outfitItem.getSeason()) {
+                seasonsArray.add(season);
+            }
+            jsonObject.add("seasons", seasonsArray);
+
             jsonObject.addProperty("description", outfitItem.getDescription());
             jsonArray.add(jsonObject);
         }
@@ -92,8 +104,12 @@ public class ExcelReader {
                 "model", "gpt-4o",
                 "messages", List.of(
                         Map.of("role", "system", "content", "You are a helpful assistant."),
-                        Map.of("role", "user", "content", "You are a stylist, choose an look (shirt and pants/skirt or dresses/suits, you can add accessories and suitable shoes) for a party from the following items note that the colors match, return JSON with only their ID:" + clothes)
+                        Map.of("role", "user", "content", "You are a stylist. Choose 3 outfits (each must include either a top, bottom, or dress, plus shoes; bag and other accessories are optional) for a party from the following items. Ensure the colors match. Return a JsonArray with each outfit as a JsonObject. Use the following naming convention for the item IDs in the JSON: \"top\", \"bottom\", \"dress\", \"shoes\", \"bag\". Each outfit should also include an explanation for your choices. Only include the IDs and explanation in the JSON: " + clothes
+                        )
                 )
+
+               // old request in case we want to use it:
+               //You are a stylist, choose a look (shirt and pants/skirt or dresses/suits, you can add accessories and suitable shoes) for a party from the following items. Note that the colors match, return JSON with only their ID:" + clothes
         ));
 
 // Print the request payload to debug
@@ -114,10 +130,42 @@ public class ExcelReader {
             // Print the response
             System.out.println("Response from GPT API:");
             System.out.println(response.body());
+
+            // FOR TESTING COMMENT EVERYTHING OUT FROM HERE INCLUDING THE FOR LOOP !!!
+
+            // Step 1: Parse the main JSON response
+            String responseBody = response.body();
+            JsonObject jsonResponse = JsonParser.parseString(responseBody).getAsJsonObject();
+            JsonArray choicesArray = jsonResponse.getAsJsonArray("choices");
+
+            // Get the content string from the big Json inside choicesArray
+            JsonObject firstChoice = choicesArray.get(0).getAsJsonObject();
+            String content = firstChoice.getAsJsonObject("message").get("content").getAsString();
+
+            // Step 2: Parse the content string which contains the JSON array of outfit suggestions
+            JsonArray outfitSuggestionsArray = JsonParser.parseString(content).getAsJsonArray();
+
+            // Step 3: Convert JSON to Java objects and store them in a List
+            List<OutfitSuggestion> outfitSuggestions = new ArrayList<>();
+            String excelFilePath = "src/main/files/Classification of clothes.xlsx";
+
+            for (int i = 0; i < outfitSuggestionsArray.size(); i++) {
+                JsonObject outfitSuggestionJson = outfitSuggestionsArray.get(i).getAsJsonObject();
+
+                // Extract the "outfit" and "explanation"
+                // JsonObject outfitJson = outfitSuggestionJson.getAsJsonObject("outfit");
+                // Commented it out ^ in case it returns the ids in Json again.
+                // After prompt change it returns each id individually, so just in case.
+                String explanation = outfitSuggestionJson.get("explanation").getAsString();
+
+
+            }
+
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
+
     private static List<String> getSeasonArray(String season) {
         List<String> seasons = new ArrayList<>();
         if (season.equals("all") || season.equals("all season")) {
