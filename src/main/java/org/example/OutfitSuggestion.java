@@ -26,4 +26,13 @@ public class OutfitSuggestion {
     public void setExplanation(String explanation) {
         this.explanation = explanation;
     }
+
+
+    @Override
+    public String toString() {
+        return "OutfitSuggestion{" +
+                "outfit=" + outfit +
+                ", explanation='" + explanation + '\'' +
+                '}';
+    }
 }

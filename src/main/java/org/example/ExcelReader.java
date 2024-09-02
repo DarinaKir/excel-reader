@@ -1,24 +1,17 @@
 package org.example;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import org.apache.poi.ss.usermodel.*;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Map;
-
-import com.google.gson.Gson;
 
 public class ExcelReader {
     private static final String API_KEY = "";
@@ -26,11 +19,13 @@ public class ExcelReader {
     private static final List<OutfitItem> outfits = new ArrayList<>();
 
     public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("For what event would you like your outfits to be chosen for?");
+        String answer = scanner.nextLine();
         extractOutfitItemsFromExcel();
-
-        sendOutfitRequest();
-
+        sendOutfitRequest(answer);
     }
+
     private static void extractOutfitItemsFromExcel () {
         String excelFilePath = "src/main/files/Classification of clothes.xlsx";
         int startRow = 1; // Start from row 2 (index 1)
@@ -77,7 +72,7 @@ public class ExcelReader {
         }
     }
 
-    private static void sendOutfitRequest () {
+    private static void sendOutfitRequest (String answer) {
         Gson gson = new Gson();
         JsonArray jsonArray = new JsonArray();
 
@@ -104,7 +99,7 @@ public class ExcelReader {
                 "model", "gpt-4o",
                 "messages", List.of(
                         Map.of("role", "system", "content", "You are a helpful assistant."),
-                        Map.of("role", "user", "content", "You are a stylist. Choose 3 outfits (each must include either a top, bottom, or dress, plus shoes; bag and other accessories are optional) for a party from the following items. Ensure the colors match. Return a JsonArray with each outfit as a JsonObject. Use the following naming convention for the item IDs in the JSON: \"top\", \"bottom\", \"dress\", \"shoes\", \"bag\". Each outfit should also include an explanation for your choices. Only include the IDs and explanation in the JSON: " + clothes
+                        Map.of("role", "user", "content", "You are a stylist. Choose 3 outfits (each must include either a top, bottom, or dress, plus shoes; bag and other accessories are optional) for" + answer + "from the following items. Ensure the colors match. Return a JsonArray with each outfit as a JsonObject. Use the following naming convention for the item IDs in the JSON: \"top\", \"bottom\", \"dress\", \"shoes\", \"accessory\". Each outfit should also include an explanation for your choices. Only include the IDs and explanation in the JSON: " + clothes
                         )
                 )
 
@@ -127,11 +122,8 @@ public class ExcelReader {
 
         try {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            // Print the response
             System.out.println("Response from GPT API:");
             System.out.println(response.body());
-
-            // FOR TESTING COMMENT EVERYTHING OUT FROM HERE INCLUDING THE FOR LOOP !!!
 
             // Step 1: Parse the main JSON response
             String responseBody = response.body();
@@ -142,29 +134,62 @@ public class ExcelReader {
             JsonObject firstChoice = choicesArray.get(0).getAsJsonObject();
             String content = firstChoice.getAsJsonObject("message").get("content").getAsString();
 
-            // Step 2: Parse the content string which contains the JSON array of outfit suggestions
-            JsonArray outfitSuggestionsArray = JsonParser.parseString(content).getAsJsonArray();
+            String cleanedContent = content.replaceAll("```json\\n|\\n```", "").replace("\\n", "\n");
+            try {
+                JsonArray outfitSuggestionsArray = JsonParser.parseString(cleanedContent).getAsJsonArray();
+                // Further processing of the JsonArray
 
-            // Step 3: Convert JSON to Java objects and store them in a List
-            List<OutfitSuggestion> outfitSuggestions = new ArrayList<>();
-            String excelFilePath = "src/main/files/Classification of clothes.xlsx";
+                // Step 3: Convert JSON to Java objects and store them in a List
+                List<OutfitSuggestion> outfitSuggestions = new ArrayList<>();
 
-            for (int i = 0; i < outfitSuggestionsArray.size(); i++) {
-                JsonObject outfitSuggestionJson = outfitSuggestionsArray.get(i).getAsJsonObject();
-
-                // Extract the "outfit" and "explanation"
-                // JsonObject outfitJson = outfitSuggestionJson.getAsJsonObject("outfit");
-                // Commented it out ^ in case it returns the ids in Json again.
-                // After prompt change it returns each id individually, so just in case.
-                String explanation = outfitSuggestionJson.get("explanation").getAsString();
-
-
+                for (int i = 0; i < outfitSuggestionsArray.size(); i++) {
+                    List<OutfitItem> itemsOfSuggestion = new LinkedList<>();
+                    JsonObject outfitSuggestionJson = outfitSuggestionsArray.get(i).getAsJsonObject();
+                    String explanation = outfitSuggestionJson.get("explanation").getAsString();
+                    itemsOfSuggestion = parseOutfitJson(outfitSuggestionJson);
+                    OutfitSuggestion outfitSuggestion = new OutfitSuggestion(itemsOfSuggestion, explanation);
+                    outfitSuggestions.add(outfitSuggestion);
+                }
+                //PRINTS OUTFIT SUGGESTION ARRAY !!! :)
+                for (OutfitSuggestion outfitSuggestion : outfitSuggestions) {
+                    System.out.println(outfitSuggestion);
+                    System.out.println(" ");
+                }
+            } catch (JsonSyntaxException e) {
+                e.printStackTrace();
+                System.out.println("Malformed JSON: " + e.getMessage());
             }
-
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
+
+    private static List<OutfitItem> parseOutfitJson(JsonObject outfitSuggestionJson) {
+        List<OutfitItem> outfitItems = new LinkedList<>();
+        for (String key : outfitSuggestionJson.keySet()) {
+            if (!key.equals("explanation")) {
+                JsonElement element = outfitSuggestionJson.get(key);
+
+                // Assuming all IDs are integers
+                int id = element.getAsInt();
+
+                OutfitItem outfit = outfits.stream()
+                        .filter(item -> item.getId() == id)
+                        .findFirst()
+                        .orElse(null);
+                if (outfit != null) {
+                    // Do something with the outfit
+                    outfitItems.add(outfit);
+                } else {
+                    // Handle the case where the outfit is not found
+                    System.out.println("oopsie");
+                }
+            }
+        }
+        return outfitItems;
+    }
+
+
 
     private static List<String> getSeasonArray(String season) {
         List<String> seasons = new ArrayList<>();
