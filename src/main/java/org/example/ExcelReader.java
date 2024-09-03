@@ -72,7 +72,7 @@ public class ExcelReader {
         }
     }
 
-    private static void sendOutfitRequest (String answer) {
+    private static List<OutfitSuggestion> sendOutfitRequest (String answer) {
         Gson gson = new Gson();
         JsonArray jsonArray = new JsonArray();
 
@@ -120,6 +120,8 @@ public class ExcelReader {
                 .POST(HttpRequest.BodyPublishers.ofString(requestPayload))
                 .build();
 
+        List<OutfitSuggestion> outfitSuggestions = new ArrayList<>();
+
         try {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             System.out.println("Response from GPT API:");
@@ -135,12 +137,9 @@ public class ExcelReader {
             String content = firstChoice.getAsJsonObject("message").get("content").getAsString();
 
             String cleanedContent = content.replaceAll("```json\\n|\\n```", "").replace("\\n", "\n");
+
             try {
                 JsonArray outfitSuggestionsArray = JsonParser.parseString(cleanedContent).getAsJsonArray();
-                // Further processing of the JsonArray
-
-                // Step 3: Convert JSON to Java objects and store them in a List
-                List<OutfitSuggestion> outfitSuggestions = new ArrayList<>();
 
                 for (int i = 0; i < outfitSuggestionsArray.size(); i++) {
                     List<OutfitItem> itemsOfSuggestion = new LinkedList<>();
@@ -162,6 +161,7 @@ public class ExcelReader {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+        return outfitSuggestions;
     }
 
     private static List<OutfitItem> parseOutfitJson(JsonObject outfitSuggestionJson) {
